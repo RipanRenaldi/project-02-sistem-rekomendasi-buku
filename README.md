@@ -1,5 +1,4 @@
-https://www.kaggle.com/datasets/arashnic/book-recommendation-dataset
-# Laporan Proyek Machine Learning Sistem Rekomendasi - Ripan Renaldi
+# Laporan Proyek Machine Learning Sistem Rekomendasi Buku - Ripan Renaldi
 
 ## Project Overview
 
