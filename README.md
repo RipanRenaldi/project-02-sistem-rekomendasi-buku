@@ -79,16 +79,65 @@ Sebelum data benar-benar siap diolah oleh algoritma *machine learning*, perlu di
   Porsi pembagian data latih sebesar 85%, dan 15% data uji. Angka tersebut saya ambil karena data yang kita miliki berjumlah banyak yakni lebih dari satu juta data. Data latih ini digunakan untuk melatih model, sedangkan data validasi digunakan agar model yang kita latih tercegah dari *overfitting*.
   
 ## Modeling
-Setelah data selesai melalui tahap *preparation* dan *preprocessing*, selanjutnya akan dibuat model sistem rekomendasi yang menghasilkan *top*-n rekomendasi buku untuk pengguna. Dalam penyelesaian rumusan masalah di atas, saya akan menggunakan pendekatan *Collaborative Filtering*. Jika dibandingkan dengan teknik *Content Based Filtering*, *Content Based Filtering* ini bergantung kepada konten tiap *item*. Sehingga pendekatan *Collaborative Filtering* ini lebih cocok untuk digunakan pada studi kasus ini, khususnya karena skala *user* pada data banyak. Selain itu, pendekatan ini dapat melihat ketertarikan pengguna yang lebih spesifik.  
-Cara kerja *Collaborative Filtering* ini yaitu dengan memprediksi preferensi pengguna untuk suatu *item* atau layanan dengan mempelajari *item* pengguna dari sekelompok *user* yang mempunyai kesamaan preferensi atau minat di masa lalu [3].
+Setelah data selesai melalui tahap *preparation* dan *preprocessing*, selanjutnya akan dibuat model sistem rekomendasi yang menghasilkan *top*-n rekomendasi buku untuk pengguna. Dalam penyelesaian rumusan masalah di atas, saya akan menggunakan pendekatan *Collaborative Filtering*. Jika dibandingkan dengan teknik *Content Based Filtering*, *Content Based Filtering* ini bergantung kepada konten tiap *item*. Sehingga pendekatan *Collaborative Filtering* ini lebih cocok untuk digunakan pada studi kasus ini, khususnya karena skala *user* pada data banyak. Selain itu, pendekatan ini dapat melihat ketertarikan pengguna yang lebih spesifik. Cara kerja *Collaborative Filtering* ini yaitu dengan memprediksi preferensi pengguna untuk suatu *item* dengan mempelajari *item* pengguna dari sekelompok *user* yang mempunyai kesamaan preferensi atau minat di masa lalu [3].
+
+Dalam penerapannya, pembuatan model dapat dilakukan dengan beberapa cara, bisa dengan *sequential model*, bisa dengan *functional api*, atau dengan *subclass model* yang meng*inherite* keras model. Di sini saya menerapkan model dengan mewarisi `tf.keras.Model`. Terdapat beberapa *method* yang harus dipenuhi saat membuat *subclass* yang mewarisi *class* keras ini, diantaranya *method* `__init__` dan *method* `call`. Di dalam *method* `__init__` kita definisikan seluruh *layer* yang kita buat didalamnya. Lalu kita panggil *layer* yang telah dibuat tadi pada *method* `call` (*forward pass model*). Di dalam *method* `__init__` pula kita membuat beberapa parameter yang akan diinisialisasi ketika *sub class* ini diinstansiasi, diantaranya yaitu num_users yang merepresentasikan jumlah *users*, num_books yang merepresentasikan jumlah buku, dan embedding_size sebagai *output dimmension* dari *layer embedding* ini. Setelah *layer* telah didefinisikan pada *method `__init__`, selanjutnya memanggil *layer embedding* pertama, *layer embedding* kedua, dan seterusnya. Lalu untuk fungsi aktivasi pada layer terakhir menggunakan sigmoid sebagai fungsi aktivasinya. Sigmoid ini akan menghitung probabilitas dari nol sampai satu.  
+
+Setelah pembuatan *class* selesai, selanjutnya yaitu instansiasi *class* tersebut dengan mengirimkan beberapa argumen, seperti num_users, num_books, dan embedding_sizenya. Selanjutnya kita compile model tersebut dengan mengirimkan beberapa argumen, dalam penghitungan loss function saya menggunakan binary_crossentropy, optimizer menggunakan adam optimizer dengan learning rate 0.0001, dan yang terakhir yaitu menghitung nilai *error* atau metric menggunakan RMSE (*Root Mean Squared Error*).  
+Dalam nilai *hyperparameter learning rate ini* terdapat beberapa pertimbangan
+1. Jika nilainya terlalu kecil, untuk mencapai *local minimum* pada perhitungan loss function tiap epoch akan sangat lama.
+2. Jika nilainya terlalu besar, berpotensi akan melewati local minimum, atau global minimum. Namun, proses pelatihan akan lebih cepat.
+
+Berdasarkan dua hal di atas, Adam ini merupakan metode *adaptive learning rate* yang mana adam akan mengupdate learning rate yang berbeda tiap epoch (*adaptive*). Dalam suatu artikel di medium, dijelaskan bahwa bobot *learning rate* yang proporsional yaitu di nilai 0.001 [4]. Namun, pada studi kasus kali ini, saya akan mencoba nilai *learning rate* yang berbeda yaitu di nilai 0.0001.
+
+### Mendapatkan hasil rekomendasi  
+Terdapat beberapa tahapan yang perlu dilakukan sebelum model dapat memberikan rekomendasi berdasarkan *rating* pada buku yang telah dibaca oleh *user*.  
+1. Mengambil satu sample user secara acak pada file *ratings*. Selanjutnya yaitu mencari sekaligus menyimpan data buku yang telah dibaca oleh user.
+2. Mencari list buku yang belum pernah dibaca oleh user. Data tersebut perlu kita simpan karena data inilah yang akan digunakan untuk membuat rekomendasi buku nantinya.
+3. Pengguna telah memberikan *rating* terhadap buku-buku yang telah mereka baca sebelumnya. Berdasarkan *rating* inilah algoritma *Collaborative Filtering* dapat bekerja. Pendekatan ini akan memanfaatkan *rating* yang telah diberikan pengguna untuk mendapatkan rekomendasi buku yang sesuai. Pencarian kesamaan preferensi ini dapat dilakukan dengan berbagai cara, dalam hal ini model akan mencari kesamaan preferensi berdasarkan rating pengguna yang lain di masa lalu.
+4. Selanjutnya yaitu mendapatkan hasil rekomendasi menggunakan fungsi `predict()` pada model yang telah dibuat.
+
+Berikut merupakan hasil rekomendasi :  
+
+User : 258152  
+*Book with high ratings from user*
+| No | ISBN       | Book Title                                     |
+|----|------------|------------------------------------------------|
+| 1  | 0440134056 | Hacker's Heroes of Computers                   |
+| 2  | 0465026567 | GÃ¶del, Escher, Bach: An Eternal Golden Braid  |
+| 3  | 0553572539 | Chaos and Order : The Gap Into Madness (Gap)   |
+| 4  | 0553573284 | This Day All Gods Die: The Gap into Ruin (Gap) |  
+
+  Tabel 1. *Book With High Ratings From User*  
+
+*Top 10 Recommendation For Users*
+| No | ISBN       | Book Title                                         |
+|----|------------|----------------------------------------------------|
+| 1  | 043935806X | Harry Potter and the Order of the Phoenix (Book 5) |
+| 2  | 0439064864 | Harry Potter and the Chamber of Secrets (Book 2)   |
+| 3  | 0812550706 | Ender's Game (Ender Wiggins Saga (Paperback))      |
+| 4  | 0439136350 | This Day All Gods Die: The Gap into Ruin (Gap)     |
+| 5  | 0439139597 | Harry Potter and the Prisoner of Azkaban (Book 3)  |
+| 6  | 0590353403 | Harry Potter and the Goblet of Fire (Book 4)       |
+| 7  | 0060256672 | Harry Potter and the Sorcerer's Stone (Book 1)     |
+| 8  | 1844262553 | Where the Sidewalk Ends : Poems and Drawings       |
+| 9  | 8445071416 | Free                                               |
+| 10 | 0064440508 | El Hobbit                                          |  
+
+  Tabel 2. *Top 10 Recommendation Books For User*  
+
+Jika kita melihat buku dengan *rating* tertinggi yang diberikan oleh *user* 258152. Jika kita cari buku bernomor 1 dan 2 memiliki genre *science*, nomor 3 dan 4 bergenre *fiction, action dan adventure*. Selanjutnya, jika kita lihat hasil rekomendasi untuk *user*, nomor 1 dan 2 merupakan buku dengan judul harry potter. Seperti yang kita ketahui, buku harry potter ini merupakan buku dengan genre *action, fiction, dan adventure*. Selanjutnya model merekomendasikan buku dengan judul *Ender's Game*, yang mana bila kita cari buku ini, buku tersebut memiliki genre *science* dan *fiction*.  
+
+Berdasarkan tabel 1 dan 2, model telah berhasil memberikan rekomendasi buku yang sesuai dengan preferensi pengguna.
 
 ## Evaluation
 Pada studi kasus ini, metrik evaluasi yang akan digunakan yaitu *Root Mean Squared Error*  
-![RMSE](https://github.com/RipanRenaldi/project-02-sistem-rekomendasi-buku/blob/main/assets/rmse_formula.png?raw=True)  
-  Gambar 1. *Formula* MSE  
+Formula RMSE dan MSE :  
+
+$$RMSE = \sqrt{{1\over n} \sum_{i=1}^{n}{(y_i - y)^2\over n}}$$
   
-![MSE](https://github.com/RipanRenaldi/project-02-sistem-rekomendasi-buku/blob/main/assets/mse_formula.png?raw=True)  
-  Gambar 2. *Formula* RMSE  
+$$MSE = {{1\over n} \sum_{i=1}^{n}{(y_i - y)^2\over n}}$$
+
   
 Cara kerja RMSE ini sebenernya kurang lebih sama seperti MSE. MSE akan menghitung selisih hasil prediksi dengan hasil sebenarnya, hasil ini cenderung akan menghasilkan nilai yang besar karena MSE akan mengkuadratkan hasil selisih tersebut sebelum dibagi total data untuk mendapatkan rata-ratanya. Oleh sebab itu, RMSE berperan untuk memperkecil skalanya dengan mengakarkan hasil dari MSE yang telah dihitung.  
 Jika dikaitkan pada studi kasus di atas, error yang dihasilkan pada proses *training* data yaitu sebesar 0.323. Sedangkan *error* pada data validasi yaitu sebesar 0.338. Berikut merupakan visualisasi evaluasi *metric RMSE* terhadap 25 epochs pada saat *training*.  
@@ -102,3 +151,4 @@ Berdasarkan gambar 3, model mendapatkan *error* yang cukup kecil yaitu memiliki 
 [1]	Moh. Irfan, D. A. C, and H. F. R, “SISTEM REKOMENDASI: BUKU ONLINE DENGAN  METODE COLLABORATIVE FILTERING,” JURNAL TEKNOLOGI TECHNOSCIENTIA, vol. 7, no. 1, pp. 76–84, Aug. 2014.  
 [2]	S. Kasiyun, “UPAYA MENINGKATKAN MINAT BACA SEBAGAI SARANA UNTUK  MENCERDASKAN BANGSA,” JURNAL PENA INDONESIA (JPI), vol. 1, no. 1, pp. 79–95, Mar. 2015.  
 [3]	G. Indah Marthasari, Y. Azhar, and D. Kurnia Puspitaningrum, “SISTEM REKOMENDASI PENYEWAAN  PERLENGKAPAN PESTA MENGGUNAKAN  COLLABORATIVE FILTERING DAN PENGGALIAN  ATURAN ASOSIASI,” Jurnal SimanteC, vol. 5, no. 1, pp. 1–8, Dec. 2015.  
+[4] Tilawah, S. (2020, May 31). Adam Optimizer. Medium  
